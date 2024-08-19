@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 from types import SimpleNamespace
 
-def geometric_median(points, weights, eps=1e-6, maxiter=100, ftol=1e-20):
+def geometric_median_list_of_array(points, weights, eps=1e-6, maxiter=100, ftol=1e-20):
     """
     :param points: list of length :math:``n``, where each element is itself a list of ``numpy.ndarray``.
         Each inner list has the same "shape".
@@ -25,7 +25,7 @@ def geometric_median(points, weights, eps=1e-6, maxiter=100, ftol=1e-20):
     early_termination = False
     for _ in range(maxiter):
         prev_obj_value = objective_value
-        new_weights = weights / jax.lax.clamp(eps, jnp.linalg.norm(points-median, axis=1), jnp.inf)
+        new_weights = weights / jax.lax.clamp(eps, jnp.stack([l2distance(p, median) for p in points]), jnp.inf)
         median = weighted_average(points, new_weights)
 
         objective_value = geometric_median_objective(median, points, weights)
@@ -41,6 +41,14 @@ def geometric_median(points, weights, eps=1e-6, maxiter=100, ftol=1e-20):
     )
 
 def weighted_average(points, weights):
-    return jnp.average(points, axis=0, weights=weights, keepdims=True)
+    return [jnp.average(component, weights=weights, axis=0) for component in zip(*points)]
+
 def geometric_median_objective(median, points, weights):
-    return jnp.average(jnp.linalg.norm(points-median, axis=1), weights=weights, axis=0)
+    return jnp.average(jnp.concatenate([l2distance(p, median) for p in points]), weights=weights)
+
+# Simple operators for list-of-array format
+def l2distance(p1, p2):
+    return jnp.linalg.norm(jnp.stack([jnp.linalg.norm(x1 - x2) for (x1, x2) in zip(p1, p2)]))
+
+def subtract(p1, p2):
+    return [x1 - x2 for (x1, x2) in zip(p1, p2)]

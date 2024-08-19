@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import jax
 
 from .weiszfeld_array import geometric_median_array, geometric_median_per_component
-from .weiszfeld_list_of_array import geometric_median_list_of_array
+from .weiszfeld_list_of_array import geometric_median
 from . import utils
 
 def compute_geometric_median(
@@ -14,24 +14,14 @@ def compute_geometric_median(
 	if weights is None:
 		n = len(points)
 		weights = jnp.ones(n)
-	if type(points) == jax.Array:
-		# `points` are given as an array of shape (n, d)
-		points = list(points)  # translate to list of arrays format
-	if type(points) not in [list, tuple]:
+	if type(points) != jax.Array:
 		raise ValueError(
-			f"We expect `points` as a list of arrays or a list of tuples of arrays. Got {type(points)}"
+			f"We expect `points` as a 2d array. Got {type(points)}"
 		)
-	if type(points[0]) == jax.Array: # `points` are given in list of arrays format
-		if not skip_typechecks:
-			utils.check_list_of_array_format(points)
-		to_return = geometric_median_array(points, weights, eps, maxiter, ftol)
-	elif type(points[0]) in [list, tuple]: # `points` are in list of list of arrays format
-		if not skip_typechecks:
-			utils.check_list_of_list_of_array_format(points)
-		if per_component:
-			to_return = geometric_median_per_component(points, weights, eps, maxiter, ftol)
-		else:
-			to_return = geometric_median_list_of_array(points, weights, eps, maxiter, ftol)
+	if per_component:
+		raise NotImplementedError(
+			f"No per component implementation"
+		)
 	else:
-		raise ValueError(f"Unexpected format {type(points[0])} for list of list format.")
+		to_return = geometric_median(points, weights, eps, maxiter, ftol)
 	return to_return
